@@ -1,10 +1,11 @@
 // create GameScreen Class
-GameScreen = {
+var GameScreen = {
 
 };
 
 // create Game function in GameScreen
 GameScreen.Game = function (game) {
+    this.game = game;
 };
 
 // set Game function prototype
@@ -28,29 +29,40 @@ GameScreen.Game.prototype = {
     },
 
     create: function () {
+        var graphics = this.add.graphics(0, 0);
+        
+        graphics.lineStyle(2, 0x0000FF, 1);
+        graphics.drawCircle(this.world.centerX, this.world.centerY, this.world.width / 6);
+        graphics.drawCircle(this.world.centerX, this.world.centerY, this.world.width / 4);
+        
         this.sun = this.add.sprite(
             this.world.centerX, // (centerX, centerY) is the center coordination
             this.world.centerY,
             'sun');
         // Set the anchor to the center of the sprite
         this.sun.anchor.setTo(0.5, 0.5);
+        this.sun.scale.setTo(0.5);
         
         this.planet1 = this.add.sprite(
             this.world.centerX - (this.world.width / 6), 
             this.world.centerY,
             'planet1');
         this.planet1.anchor.setTo(0.5, 0.5);
+        this.planet1.scale.setTo(0.5);
         
         this.planet2 = this.add.sprite(
             this.world.centerX - (this.world.width / 4), 
             this.world.centerY,
             'planet1');
         this.planet2.anchor.setTo(0.5, 0.5);
+        this.planet2.scale.setTo(0.5);
         
         this.p1 = new Phaser.Point(this.world.centerX - (this.world.width / 6), this.world.centerY);
-        this.d1 = 1;
+        this.d1 = 2 / 3;
         this.p2 = new Phaser.Point(this.world.centerX - (this.world.width / 4), this.world.centerY);
-        this.d2 = -2;
+        this.d2 = -1 / 3;
+        
+        this.megaScale = 1;
     },
     
     update: function() {
@@ -61,10 +73,12 @@ GameScreen.Game.prototype = {
         this.planet1.y = this.p1.y;
         this.planet2.x = this.p2.x;
         this.planet2.y = this.p2.y;
-        
+    },
+    
+    render: function(game) {
+        game.debug.text(game.time.fps || '--', 2, 14, "#00ff00");   
     },
 
-    gameResized: function (width, height) {
-    }
+    gameResized: function (width, height) {}
 
 };
