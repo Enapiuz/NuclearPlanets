@@ -5,6 +5,7 @@ HelloScreen = {
 
 // create Game function in HelloScreen
 HelloScreen.Game = function (game) {
+    this.game = game;
 };
 
 // set Game function prototype
@@ -23,16 +24,23 @@ HelloScreen.Game.prototype = {
     },
 
     preload: function () {
-        this.load.image('logo', 'asset/phaser.png');
+        this.load.image('start', 'asset/start.png');
     },
 
     create: function () {
-        this.logo = this.add.sprite(
-            this.world.centerX, // (centerX, centerY) is the center coordination
-            this.world.centerY,
-            'logo');
-        // Set the anchor to the center of the sprite
-        this.logo.anchor.setTo(0.5, 0.5);
+        var self = this;
+        var style = { font: "32px Arial", fill: "#16b000", wordWrap: false, /*wordWrapWidth: 500,*/ align: "center" };
+        
+        var text = this.add.text(this.world.centerX, this.world.centerY - (this.world.height / 10), "NUCLEAR PLANETS", style);
+        text.anchor.set(0.5);
+        
+        var start = this.add.sprite(this.world.centerX, this.world.centerY + (this.world.height / 10), 'start');
+        start.anchor.set(0.5);
+        start.inputEnabled = true;
+        start.events.onInputDown.add(function(){
+            self.game.state.start('Game');
+        });
+
     },
 
     gameResized: function (width, height) {
