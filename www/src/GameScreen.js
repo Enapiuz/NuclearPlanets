@@ -27,6 +27,20 @@ GameScreen.Game.prototype = {
         this.playerPlanet = getRandomInt(1, this.maxPlanets);
         this.gridStep = this.world.height / 22;
         this.gridWhiteSpace = (5 - this.maxPlanets) * this.gridStep;
+        
+        this.rockets = [];
+        
+        for (var i = 1; i <= this.maxPlanets; i++) {
+            this["followPlanet" + i] = this.game.add.group();
+        }
+        
+        $(".item").css({width: this.gridStep * 3, height: this.gridStep * 3});
+        $("#controls").show(true);
+        
+        $(".item").click(function(){
+            $(".item").removeClass("inverted");
+            $(this).addClass("inverted");
+        });
     },
 
     preload: function () {
@@ -36,9 +50,13 @@ GameScreen.Game.prototype = {
         this.load.image('planet3', 'asset/planet3.png');
         this.load.image('planet4', 'asset/planet4.png');
         this.load.image('planet5', 'asset/planet5.png');
+        this.load.image('general-rocket', 'asset/general-rocket.png');
+        this.load.image('nuclear-rocket', 'asset/nuclear-rocket.png');
     },
 
     create: function () {
+        this.game.physics.startSystem(Phaser.Physics.ARCADE);
+        
         this.graphics = this.add.graphics(0, 0);
         this.graphics.lineStyle(1, 0xffffff, 0.3);
         
@@ -70,7 +88,7 @@ GameScreen.Game.prototype = {
         }
         
         // TODO убрать тестовый дамаг
-        this["planet" + this.playerPlanet].damage(1);
+        //this["planet" + this.playerPlanet].damage(1);
         
         this.playerHeallthText.text = this["planet" + this.playerPlanet].health + " HP";
     },
@@ -82,6 +100,8 @@ GameScreen.Game.prototype = {
     gameResized: function (width, height) {},
     
     addPlanet: function(num, speed) {
+        var self = this;
+        
         this["planet" + num] = this.add.sprite(
             this.world.centerX + this.gridStep * (num * 2) + this.gridWhiteSpace, 
             this.world.centerY,
@@ -93,6 +113,8 @@ GameScreen.Game.prototype = {
         
         this["p" + num] = new Phaser.Point(this.world.centerX + this.gridStep * (num * 2) + this.gridWhiteSpace, this.world.centerY);
         this.graphics.drawCircle(this.world.centerX, this.world.centerY, this.gridStep * (num * 2) + this.gridWhiteSpace);
+        
+        this.game.physics.enable(this["planet" + num], Phaser.Physics.ARCADE);
         
         if (speed > 0) {
             speed += 1 / (num / 5);
@@ -109,6 +131,45 @@ GameScreen.Game.prototype = {
         }
         
         this["d" + num] = speed / 4;
+        
+        this["planet" + num].update = function() {
+            // TODO тут проверки
+        }
+        
+        this["planet" + num].inputEnabled = true;
+        this["planet" + num].events.onInputDown.add(function(){
+            if (num != self.playerPlanet) {
+                self.launchNuclearRocket(self.playerPlanet, num);
+            }
+        });
+    },
+    
+    launchNuclearRocket: function(launcher, target) {
+        var self = this;
+        var planet = this["planet" + launcher];
+        var targetPlanet = this["planet" + target];
+        
+        var rocket = this.add.sprite(planet.x, planet.y, "nuclear-rocket");
+        this["followPlanet" + target].add(rocket);
+        rocket.scale.setTo(0.3, 0.3);
+        
+        //  Enable Arcade Physics for the sprite
+        this.game.physics.enable(rocket, Phaser.Physics.ARCADE);
+
+        //  Tell it we don't want physics to manage the rotation
+        rocket.body.allowRotation = false;
+        rocket.update = function() {
+            self.game.physics.arcade.moveToObject(rocket, targetPlanet, 150);
+            rocket.rotation = self.game.physics.arcade.angleBetween(rocket, targetPlanet) + 1.57079633;
+            
+            self.game.physics.arcade.collide(rocket, targetPlanet, function(){
+                targetPlanet.kill(true);
+                rocket.kill();
+                self["followPlanet" + target].callAll('kill');
+            });
+        }
+        
+        //targetPlanet.addChild(rocket);
     }
 
 };

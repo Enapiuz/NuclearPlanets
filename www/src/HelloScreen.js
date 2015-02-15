@@ -21,6 +21,8 @@ HelloScreen.Game.prototype = {
         this.scale.setResizeCallback(this.gameResized, this);
         this.scale.setScreenSize(true);
         this.scale.refresh();
+        
+        $("#controls").hide();
     },
 
     preload: function () {

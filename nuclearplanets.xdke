@@ -5,6 +5,7 @@
     "projectDirectories": {},
     "currentService": {
       "service": "twitter"
-    }
+    },
+    "initialAutoPluginCount": 0
   }
 }
