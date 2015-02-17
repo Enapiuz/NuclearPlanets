@@ -75,6 +75,7 @@ GameScreen.Game.prototype = {
         
         var style = { font: "22px Arial", fill: "#ffffff", wordWrap: false, /*wordWrapWidth: 500,*/ align: "center" };
         this.playerHeallthText = this.add.text(10, 10, "100 HP", style);
+        this.playerEnergyText = this.add.text(10, 35, "100 E", style);
         
         for (var i = 1; i <= this.maxPlanets; i++) {
             this.addPlanet(i, getRandomNotNull(-3, 3));
@@ -104,6 +105,7 @@ GameScreen.Game.prototype = {
         //this["planet" + this.playerPlanet].damage(1);
         
         this.playerHeallthText.text = this["planet" + this.playerPlanet].health + " HP";
+        this.playerEnergyText.text = this["planet" + this.playerPlanet].energy + " E";
     },
     
     render: function(game) {
@@ -150,6 +152,12 @@ GameScreen.Game.prototype = {
         
         this.game.physics.enable(this["planet" + num], Phaser.Physics.ARCADE);
         
+        this["planet" + num].energyTimer = this.game.time.events.loop(Phaser.Timer.SECOND, function(){
+            if (self["planet" + num].energy + 5 <= 100) {
+                self["planet" + num].energy += 5;
+            }
+        }, this);
+        
         if (speed > 0) {
             speed += 1 / (num / 5);
         } else {
@@ -189,6 +197,10 @@ GameScreen.Game.prototype = {
         var planet = this["planet" + launcher];
         var targetPlanet = this["planet" + target];
         
+        if (planet.energy - 20 < 0) return;
+        
+        planet.energy -= 20;
+        
         var rocket = this.add.sprite(planet.x, planet.y, "nuclear-rocket");
         this["followPlanet" + target].add(rocket);
         rocket.scale.setTo(0.3, 0.3);
@@ -208,6 +220,9 @@ GameScreen.Game.prototype = {
                 rocket.kill();
                 if (targetPlanet.health < 1) {                  
                     self["followPlanet" + target].callAll('kill');
+                }
+                if (planet.energy + 10 <= 100) {
+                    planet.energy += 10;
                 }
             });
         }
