@@ -184,7 +184,7 @@ GameScreen.Game.prototype = {
                 if (self.activeAttack == 1) {
                     self.launchNuclearRocket(self.playerPlanet, num);
                 } else if (self.activeAttack == 2) {
-                    
+                    self.launchGeneralRocket(self.playerPlanet, num);
                 } else if (self.activeAttack == 3) {
                     
                 }
@@ -221,8 +221,50 @@ GameScreen.Game.prototype = {
                 if (targetPlanet.health < 1) {                  
                     self["followPlanet" + target].callAll('kill');
                 }
-                if (planet.energy + 10 <= 100) {
-                    planet.energy += 10;
+                
+                planet.energy += 10;
+                if (planet.energy > 100) {
+                    planet.energy = 100;
+                }
+            });
+        }
+        
+        //targetPlanet.addChild(rocket);
+    },
+    
+    launchGeneralRocket: function(launcher, target) {
+        var self = this;
+        var planet = this["planet" + launcher];
+        var targetPlanet = this["planet" + target];
+        
+        if (planet.energy - 3 < 0) return;
+        
+        planet.energy -= 4;
+        
+        var rocket = this.add.sprite(planet.x, planet.y, "general-rocket");
+        this["followPlanet" + target].add(rocket);
+        rocket.scale.setTo(0.3, 0.3);
+        rocket.anchor.setTo(0.5, 0.5);
+        
+        //  Enable Arcade Physics for the sprite
+        this.game.physics.enable(rocket, Phaser.Physics.ARCADE);
+
+        //  Tell it we don't want physics to manage the rotation
+        rocket.body.allowRotation = false;
+        rocket.update = function() {
+            self.game.physics.arcade.moveToObject(rocket, targetPlanet, self.gridStep * 15);
+            rocket.rotation = self.game.physics.arcade.angleBetween(rocket, targetPlanet) + 1.57079633;
+            
+            self.game.physics.arcade.collide(rocket, targetPlanet, function(){
+                targetPlanet.damage(1.5);
+                rocket.kill();
+                if (targetPlanet.health < 1) {                  
+                    self["followPlanet" + target].callAll('kill');
+                }
+                
+                planet.energy += 2;
+                if (planet.energy > 100) {
+                    planet.energy = 100;
                 }
             });
         }
