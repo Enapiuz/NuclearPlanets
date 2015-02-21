@@ -50,7 +50,7 @@ GameScreen.Game.prototype = {
         $(".shield").click(function(){
             $(".shield").removeClass("inverted");
             $(this).addClass("inverted");
-            self.activeShield = $(this).data("type");
+            self["planet" + self.playerPlanet].shieldType = $(this).data("type");
         });
     },
 
@@ -61,7 +61,8 @@ GameScreen.Game.prototype = {
         this.load.image('planet3', 'asset/planet3.png');
         this.load.image('planet4', 'asset/planet4.png');
         this.load.image('planet5', 'asset/planet5.png');
-        this.load.image('jets', 'asset/jets.png');
+        this.load.image('heart', 'asset/heart.png');
+        this.load.image('energy', 'asset/energy.png');
         this.load.image('general-rocket', 'asset/general-rocket.png');
         this.load.image('nuclear-rocket', 'asset/nuclear-rocket.png');
     },
@@ -74,9 +75,15 @@ GameScreen.Game.prototype = {
         this.graphics.lineStyle(1, 0xffffff, 0.3);
         
         var style = { font: "22px Arial", fill: "#ffffff", wordWrap: false, /*wordWrapWidth: 500,*/ align: "center" };
-        this.playerHeallthText = this.add.text(10, 10, "100 HP", style);
-        this.playerEnergyText = this.add.text(10, 35, "100 E", style);
-        
+        this.playerHealthText = this.add.text(40, 10, "100 HP", style);
+        this.playerEnergyText = this.add.text(40, 35, "100 E", style);
+        this.heartIcon = this.add.sprite(10, 10, 'heart');
+        this.heartIcon.width = 22;
+        this.heartIcon.height = 22;
+        this.energyIcon = this.add.sprite(10, 35, 'energy');
+        this.energyIcon.width = 22;
+        this.energyIcon.height = 22;
+
         for (var i = 1; i <= this.maxPlanets; i++) {
             this.addPlanet(i, getRandomNotNull(-3, 3));
         }
@@ -85,12 +92,10 @@ GameScreen.Game.prototype = {
             this.world.centerX, // (centerX, centerY) is the center coordination
             this.world.centerY,
             'sun');
-        // Set the anchor to the center of the sprite
         this.sun.anchor.setTo(0.5, 0.5);
         this.sun.width = this.gridStep * 2;
         this.sun.height = this.gridStep * 2;
-        //this.sun.scale.setTo(0.5);
-        
+
         this.megaScale = 1;
     },
     
@@ -104,12 +109,12 @@ GameScreen.Game.prototype = {
         // TODO убрать тестовый дамаг
         //this["planet" + this.playerPlanet].damage(1);
         
-        this.playerHeallthText.text = this["planet" + this.playerPlanet].health + " HP";
+        this.playerHealthText.text = Math.round(this["planet" + this.playerPlanet].health * 10) / 10 + " HP";
         this.playerEnergyText.text = this["planet" + this.playerPlanet].energy + " E";
     },
     
     render: function(game) {
-        game.debug.text(game.time.fps || '--', 2, 14, "#00ff00");   
+        //game.debug.text(game.time.fps || '--', 2, 14, "#00ff00");
     },
 
     gameResized: function (width, height) {},
@@ -146,15 +151,23 @@ GameScreen.Game.prototype = {
         
         this["planet" + num].health = 100;
         this["planet" + num].energy = 100;
-        
+
+        this["planet" + num].shieldType = 0;
+        this["planet" + num].lastNuclearShot = this.game.time.now;
+        this["planet" + num].lastGeneralShot = this.game.time.now;
+        this["planet" + num].lastActimeShieldCharge = this.game.time.now;
+        this["planet" + num].activeShieldSuccess = false;
+
         this["p" + num] = new Phaser.Point(this.world.centerX + this.gridStep * (num * 2) + this.gridWhiteSpace, this.world.centerY);
         this.graphics.drawCircle(this.world.centerX, this.world.centerY, this.gridStep * (num * 2) + this.gridWhiteSpace);
         
         this.game.physics.enable(this["planet" + num], Phaser.Physics.ARCADE);
-        
+
         this["planet" + num].energyTimer = this.game.time.events.loop(Phaser.Timer.SECOND, function(){
-            if (self["planet" + num].energy + 5 <= 100) {
-                self["planet" + num].energy += 5;
+            // чем ближе к солнцу, тем больше реген
+            self["planet" + num].energy += (5 * (1 + ((5 - num) / 10)));
+            if (self["planet" + num].energy > 100) {
+                self["planet" + num].energy = 100;
             }
         }, this);
         
@@ -173,10 +186,54 @@ GameScreen.Game.prototype = {
         }
         
         this["d" + num] = speed / 4;
-        
+
         this["planet" + num].update = function() {
-            // TODO тут проверки
-        }
+            if (this.health < 0) {
+                this.health = 0;
+            }
+            
+            if (this.health > 0) {
+                this.hpText.text = Math.round(this.health * 10) / 10;
+
+                if (this.shieldType == 2 && (self.game.time.now - this.lastActimeShieldCharge) > CONSTANTS.activeShieldDelay) {
+                    if (this.energy - CONSTANTS.activeShieldCost >= 0) {
+                        this.lastActimeShieldCharge = self.game.time.now;
+                        this.activeShieldSuccess = true;
+                        this.energy -= CONSTANTS.activeShieldCost;
+                    } else {
+                        this.activeShieldSuccess = false;
+                    }
+                }
+
+                if (num != self.playerPlanet) {
+                    var target = getRandomNotThis(1, 5, num);
+                    if (self["planet" + target].health > 0) {
+                        var choice = getRandomInt(1, 10);
+
+                        if (choice == 1) {
+                            self.launchNuclearRocket(num, target);
+                        } else if (choice == 2) {
+                            self.launchGeneralRocket(num, target);
+                        }
+                    }
+                }
+            }
+        };
+
+        var style = { font: (this.gridStep * 1.8) + "px Arial", fill: "#ffffff", wordWrap: false, /*wordWrapWidth: 500,*/ align: "center" };
+        this["planet" + num].hpText = self.game.add.text(0, 0, '100', style);
+        this["planet" + num].hpText.anchor.set(0.5, 0.5);
+        this["planet" + num].addChild(this["planet" + num].hpText);
+
+        this["planet" + num].damageMe = function(dmg) {
+            if (this.shieldType == 1) {
+                dmg *= CONSTANTS.passiveShield;
+            } else if (this.shieldType == 2 && this.activeShieldSuccess) {
+                dmg *= CONSTANTS.activeShield;
+            }
+
+            this.damage(dmg);
+        };
         
         this["planet" + num].inputEnabled = true;
         this["planet" + num].events.onInputDown.add(function(){
@@ -196,6 +253,10 @@ GameScreen.Game.prototype = {
         var self = this;
         var planet = this["planet" + launcher];
         var targetPlanet = this["planet" + target];
+
+        if (planet.health < 1) return;
+        if (this.game.time.now - planet.lastNuclearShot < CONSTANTS.nuclearDelay) return;
+        planet.lastNuclearShot = this.game.time.now;
         
         if (planet.energy - 20 < 0) return;
         
@@ -216,7 +277,7 @@ GameScreen.Game.prototype = {
             rocket.rotation = self.game.physics.arcade.angleBetween(rocket, targetPlanet) + 1.57079633;
             
             self.game.physics.arcade.collide(rocket, targetPlanet, function(){
-                targetPlanet.damage(10);
+                targetPlanet.damageMe(10);
                 rocket.kill();
                 if (targetPlanet.health < 1) {                  
                     self["followPlanet" + target].callAll('kill');
@@ -227,7 +288,7 @@ GameScreen.Game.prototype = {
                     planet.energy = 100;
                 }
             });
-        }
+        };
         
         //targetPlanet.addChild(rocket);
     },
@@ -236,6 +297,10 @@ GameScreen.Game.prototype = {
         var self = this;
         var planet = this["planet" + launcher];
         var targetPlanet = this["planet" + target];
+
+        if (planet.health < 1) return;
+        if (this.game.time.now - planet.lastGeneralShot < CONSTANTS.generalDelay) return;
+        planet.lastGeneralShot = this.game.time.now;
         
         if (planet.energy - 3 < 0) return;
         
@@ -256,7 +321,7 @@ GameScreen.Game.prototype = {
             rocket.rotation = self.game.physics.arcade.angleBetween(rocket, targetPlanet) + 1.57079633;
             
             self.game.physics.arcade.collide(rocket, targetPlanet, function(){
-                targetPlanet.damage(1.5);
+                targetPlanet.damageMe(1.5);
                 rocket.kill();
                 if (targetPlanet.health < 1) {                  
                     self["followPlanet" + target].callAll('kill');
@@ -267,7 +332,7 @@ GameScreen.Game.prototype = {
                     planet.energy = 100;
                 }
             });
-        }
+        };
         
         //targetPlanet.addChild(rocket);
     }

@@ -22,7 +22,7 @@ body {
 #controls-left, #controls-right {
     position: absolute;
 /*    width: 40px;*/
-    background-color: green;
+    /*background-color: green;*/
     bottom: 0;
 }
 
@@ -35,7 +35,7 @@ body {
 }
 
 .item {
-    background-color: red;
+    /*background-color: red;*/
     margin-bottom: 5px;
     display: block;
     position: relative;
